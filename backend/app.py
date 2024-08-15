@@ -1,8 +1,6 @@
-
 from flask import Flask, render_template_string, jsonify
-
 import pandas as pd
-
+from importance_level import importances
 
 app = Flask(__name__)
 
@@ -10,11 +8,19 @@ app = Flask(__name__)
 def get_data():
     return jsonify({'message': 'we are up!'})
 
+@app.route('/addtask')
+def add_task():
+    pass
+
+@app.route('/deletetask')
+def delete_task():
+    pass
+
 
 @app.route('/')
 def show_dataframe():
     df = pd.read_csv('tasks.csv')
-
+    
     # Convert DataFrame to HTML
     html_table = df.to_html(classes='table table-striped', index=False)
     
@@ -26,7 +32,7 @@ def show_dataframe():
             </head>
             <body>
                 <div class="container">
-                    <h1>DataFrame Table</h1>
+                    <h1>my TODO list</h1>
                     {{ table | safe }}
                 </div>
             </body>
