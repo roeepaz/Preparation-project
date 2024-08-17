@@ -20,10 +20,13 @@ def delete_task():
 @app.route('/')
 def show_dataframe():
     df = pd.read_csv('tasks.csv')
+
+    # Convert DataFrame to JSON
+    #json_data = df.to_dict(orient='records')
+    #return jsonify(json_data)
     
     # Convert DataFrame to HTML
     html_table = df.to_html(classes='table table-striped', index=False)
-    
     # Render the HTML template
     return render_template_string('''
         <html>
