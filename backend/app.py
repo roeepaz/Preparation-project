@@ -1,25 +1,62 @@
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string, jsonify, request
 import pandas as pd
 from importance_level import importances
+from pydantic import BaseModel
+from enum import Enum
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
+class Importance(str, Enum):
+    HIGH = "High"
+    MEDIUM = "Medium"
+    LOW = "Low"
+
+class Task(BaseModel):
+    id: int
+    name: str
+    description: str
+    is_done: bool
+    importance: str
+    estimated_end_time: str
+
+#messege to the front
 @app.route('/api/data', methods=['GET'])
 def get_data():
     return jsonify({'message': 'we are up!'})
 
-@app.route('/addtask')
-def add_task():
-    pass
+@app.route('/get-dataframe', methods=['GET'])
+def get_data_frame():
+    df = pd.read_csv('tasks.csv', index_col= 'id')
+    df_reset = df.reset_index()
 
-@app.route('/deletetask')
-def delete_task():
-    pass
+    json_data = df_reset.to_dict(orient='records')
+    # Return JSON data
+    return jsonify(json_data)
+
+
+#@app.route('/addtask', methods=['POST'])
+#def add_task(task: Task):
+    
+   # df.add(task)
+    
+    #task_to_add = request.get_json()
+    #return jsonify(task_to_add), 201
+    
+
+#@app.route('/deletetask', mathods=['POST'] )
+#def delete_task(id_to_delete):
+
+   # task_to_delete = request.
+
+   #df = df.drop(df[df['id'] == id_to_delete].index)
+
+
 
 
 @app.route('/')
-def show_dataframe():
-    df = pd.read_csv('tasks.csv')
+def home():
 
     # Convert DataFrame to JSON
     #json_data = df.to_dict(orient='records')
