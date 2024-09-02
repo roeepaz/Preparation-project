@@ -142,13 +142,17 @@ function App() {
          value={newTask.description} 
          onChange={handleInputChange} 
        />
+       <label>
+       Estimated End Time:
        <input 
-         type="text" 
-         name="estimated_end_time" 
-         placeholder="Estimated End Time" 
-         value={newTask.estimated_end_time} 
-         onChange={handleInputChange} 
-       />
+        type="time" 
+        name="estimated_end_time" 
+        value={newTask.estimated_end_time} 
+        onChange={handleInputChange} 
+        required
+      />
+       </label>
+      <br></br>
        <label>
          Importance:
          <select 
