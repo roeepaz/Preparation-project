@@ -20,14 +20,13 @@ def get_data_frame():
 @app.route('/delete-tasks', methods=['DELETE'])
 def delete_tasks():
     global df
-    task_ids = request.json.get('ids', [])
-    if task_ids:
-        for id in task_ids:
-            df.drop(index=[id],inplace=True)
+    task_id = request.json.get('id')
+    if task_id in df.index:
+        df.drop(index=[task_id],inplace=True)
         save_tasks(df)
-        return jsonify({"status": "success"})
+        return jsonify({"message": f"Task {task_id} status updated successfully"}), 200
     else:
-        return jsonify({"error": "No task IDs provided"}), 400
+        return jsonify({"error": "Task not found"}), 404
 
 
 @app.route('/add-task', methods=['POST'])
@@ -52,6 +51,17 @@ def add_task():
     
     return jsonify({"message": "Task added successfully", "id": f"new_id"}), 201
 
+@app.route('/toggle-task-status', methods=['PUT'])
+def toggle_task_status():
+    global df
+    task_id = request.json.get('id')
+
+    if task_id in df.index:
+        df.loc[task_id, 'is_done'] = True
+        save_tasks(df)
+        return jsonify({"message": f"Task {task_id} status updated successfully"}), 200
+    else:
+        return jsonify({"error": "Task not found"}), 404
 
 @app.route('/')
 def home():

@@ -1,41 +1,63 @@
 import React, { useEffect, useState } from 'react';
-import { fetchTasks, addTask, deleteTasks } from './APIServer';
+import { fetchTasks, addTask, deleteTasks, updateTask } from './APIServer';
 import './App.css';
 import { useNavigate } from 'react-router-dom';
 
 const MainApp = () => {
   const role = sessionStorage.getItem('role');
   const [data, setData] = useState([]);
-  const [selectedTaskIds, setSelectedTaskIds] = useState([]);
   const [error, setError] = useState({});
   const navigate = useNavigate();
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
 
-  //TODO make sure that the user see all the error
+  
+  useEffect(() => {
+    if (!role) {
+      navigate('/');
+      return;
+    }
+    getTasks(); 
+    // Set up interval to fetch tasks every 5 seconds
+    setInterval(getTasks(), 5000);
+
+    // Cleanup interval on component unmount
+    //return () => clearInterval(intervalId);
+  }, [role, navigate]);
+
+
   const validation = () => {
     const newError = {};
-    if (newTask.name.length == 0) newError.name = 'Name must be filled out';
-    if (newTask.description.length == 0)
-      newError.description = 'Description must be filled out';
-    if (newTask.estimated_end_time.length == 0)
-      newError.time = 'Time must be filled out';
+    console.log("new task name is :" + newTask.name);
+    if (!newTask.name) newError.name = 'Name must be filled out';
+    if (!newTask.description) newError.description = 'Description must be filled out';
+    if (!newTask.estimated_end_time) newError.time = 'Time must be filled out';
+    console.log(newError)
     setError(newError);
-    return Object.keys(newError).length == 0;
+    return Object.keys(newError).length === 0;
   };
+
   const [newTask, setNewTask] = useState({
     name: '',
     description: '',
     is_done: false,
-    importance: 'Medium', // Default importance level
+    importance: 'Medium',
     estimated_end_time: ''
   });
-
-  const handleCheckboxChange = (id) => {
-    setSelectedTaskIds((prevSelectedIds) =>
-      prevSelectedIds.includes(id)
-        ? prevSelectedIds.filter((taskId) => taskId !== id) // Deselect
-        : [...prevSelectedIds, id] // Select multiple
-    );
+  const getTasks = async () => {
+    const taskData = await fetchTasks();
+    //console.log(taskData);
+    setData(taskData);
   };
+
+
+  const handleRadioChange = (id) => {
+    if (selectedTaskId === id) {
+      setSelectedTaskId(null);
+    } else {
+      setSelectedTaskId(id)
+    }
+  };
+  
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setNewTask((prevState) => ({
@@ -43,57 +65,29 @@ const MainApp = () => {
       [name]: type === 'checkbox' ? checked : value
     }));
   };
-  
-  useEffect(() => {
-    //protecting the app
-    if (!role) navigate('/');
-    getTasks();
-  }, [role, navigate]);
 
-
-  // work with Async/await
-  const getTasks = async () => {
-    try {
-      const taskData = await fetchTasks();
-      setData(taskData);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-    }
-  };
-
-  const handleRadioChange = (id) => {
-    if (selectedRadioTaskId === id) {
-      setSelectedRadioTaskId(null); // Uncheck the radio button if clicked again
-    } else {
-      setSelectedRadioTaskId(id); // Check the radio button if different
-    }
-  };
   const handleAddTask = async () => {
     if (validation()) {
       try {
         await addTask(newTask);
-        getTasks();
-        setNewTask({
-          name: '',
-          description: '',
-          is_done: false,
-          importance: 'Medium',
-          estimated_end_time: '',
-        });
+        setNewTask({ name: '', description: '', is_done: false, importance: 'Medium', estimated_end_time: '' });
+        getTasks();  // Refresh tasks
       } catch (error) {
         console.error('Error adding task:', error);
       }
     } else {
+      // not the update error
       const errorMessages = Object.values(error).join('\n');
+      console.log(errorMessages)
       alert(`Please fix the following errors:\n${errorMessages}`);
     }
   };
 
   const handleDelete = async () => {
-    if (selectedTaskIds.length > 0) {
+    if (selectedTaskId) {
       try {
-        await deleteTasks(selectedTaskIds);
-        getTasks();
+        await deleteTasks(selectedTaskId);
+        getTasks();  // Refresh tasks
       } catch (error) {
         console.error('Error deleting tasks:', error);
       }
@@ -101,9 +95,28 @@ const MainApp = () => {
       alert('Please select at least one task to delete.');
     }
   };
+  const handleUpdate = async () => {
+    if (selectedTaskId) {
+      try {
+        await updateTask(selectedTaskId);  // Make sure `updateTask` points to the correct API endpoint
+        getTasks();  // Refresh tasks after updating
+        alert(`Task ${selectedTaskId} has been marked as done!`);
+      } catch (error) {
+        console.error('Error updating task:', error);
+      }
+    } else {
+      alert('Please select a task to update.');
+    }
+  };
+    const handleLogout = () => {
+    sessionStorage.removeItem('role');
+    navigate('/'); // Redirect to login page
+  };
+
 
   return (
     <div>
+      <button onClick={handleLogout}>Logout</button>
       <h1>Task List</h1>
       <table>
         <thead>
@@ -113,8 +126,11 @@ const MainApp = () => {
             <th>Description</th>
             <th>Importance</th>
             <th>Estimated End Time</th>
-            {role === 'user' && <th>Select Tasks</th>}
-            {role === 'admin' && <th>Select</th>}
+            <th>is done?</th>
+            {role === 'user' && 
+            <th>Select Tasks</th>}
+            {role === 'admin' && 
+            <th>Select</th>}
           </tr>
         </thead>
         <tbody>
@@ -126,14 +142,15 @@ const MainApp = () => {
                 <td>{task.description}</td>
                 <td>{task.importance}</td>
                 <td>{task.estimated_end_time}</td>
+                <td>{task.is_done ? 'yes' : 'no'}</td>
                 {role === 'user' && (
                   <td>
                     <input
-                      type="checkbox"
-                      name="task-select"
+                      type="radio"
+                      name="selectedTask"
                       value={task.id}
-                      checked={selectedTaskIds.includes(task.id)}
-                      onChange={() => handleCheckboxChange(task.id)}
+                      checked={selectedTaskId === task.id}
+                      onClick={() => handleRadioChange(task.id)}
                     />
                   </td>
                 )}
@@ -143,8 +160,8 @@ const MainApp = () => {
                       type="radio"
                       name="task-select"
                       value={task.id}
-                      checked={selectedTaskIds.includes(task.id)}
-                      onChange={() => handleRadioChange(task.id)}
+                      checked={selectedTaskId === task.id}
+                      onClick={() => handleRadioChange(task.id)}
                     />
                   </td>
                 )}
@@ -157,59 +174,60 @@ const MainApp = () => {
           )}
         </tbody>
       </table>
-      <button onClick={handleDelete}>
-      {role == 'admin' && (
-        <p>Delete Selected Tasks</p>
-      )}
-      {role == 'user' && (
-        <p>I'm a user and I finished the selected tasks</p>
-      )}
-      </button>
 
-      {role == 'user' && (
+      {role ==='admin' &&(
+         <button onClick={handleDelete}>
+         admin Delete Selected Tasks
+       </button>
+
+      )}
+      {role ==='user' &&(
+         <button onClick={handleUpdate}>
+         I'm user and i fhnish this task
+       </button>
+      )}
+      {role === 'user' && (
         <form id="user">
           <h2>Add New Task</h2>
-          <div>
+          <input
+            type="text"
+            name="name"
+            placeholder="Task Name"
+            value={newTask.name}
+            onChange={handleInputChange}
+          />
+          <input
+            type="text"
+            name="description"
+            placeholder="Description"
+            value={newTask.description}
+            onChange={handleInputChange}
+          />
+          <label>
+            Estimated End Time:
             <input
-              type="text"
-              name="name"
-              placeholder="Task Name"
-              value={newTask.name}
+              type="time"
+              name="estimated_end_time"
+              value={newTask.estimated_end_time}
               onChange={handleInputChange}
             />
-            <input
-              type="text"
-              name="description"
-              placeholder="Description"
-              value={newTask.description}
+          </label>
+          <br />
+          <label>
+            Importance:
+            <select
+              name="importance"
+              value={newTask.importance}
               onChange={handleInputChange}
-            />
-            <label>
-              Estimated End Time:
-              <input
-                type="time"
-                name="estimated_end_time"
-                value={newTask.estimated_end_time}
-                onChange={handleInputChange}
-              />
-            </label>
-            <br />
-            <label>
-              Importance:
-              <select
-                name="importance"
-                value={newTask.importance}
-                onChange={handleInputChange}
-              >
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-              </select>
-            </label>
-            <button type="button" onClick={handleAddTask}>
-              Add Task
-            </button>
-          </div>
+            >
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </label>
+          <button type="button" onClick={handleAddTask}>
+            Add Task
+          </button>
         </form>
       )}
     </div>

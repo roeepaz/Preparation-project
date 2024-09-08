@@ -7,20 +7,19 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    // Hardcoded credentials
     const adminArr = ['admin123', 'admin123'];
     const users = ['user1', 'user1'];
 
     if (username === adminArr[0] && password === adminArr[1]) {
       sessionStorage.setItem('role', 'admin');
       alert('Welcome, Admin!');
-      navigate('/App');
+      navigate('/admin-page');
     } else if (username === users[0] && password === users[1]) {
       sessionStorage.setItem('role', 'user');
       alert('Welcome, User!');
-      navigate('/App');
+      navigate('/user-page');
     } else {
-      alert('Invalid credentials. Please try again.');
+      alert('wrong user name ot password. Please try again.');
     }
   };
 
